@@ -588,7 +588,7 @@ function formatDateBR(iso) {
 
 // ── Inicialização ─────────────────────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Decidir tela inicial
   if (!isConfigured()) {
     document.getElementById("setupScreen").classList.remove("hidden");
@@ -596,30 +596,30 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("appMain").classList.remove("hidden");
-    loadPlayers();
+    await loadPlayers();
     loadMatches();
   }
 
   // ── Tela de setup ──────────────────────────────────────────────────────
-  document.getElementById("setupSave").addEventListener("click", () => {
+  document.getElementById("setupSave").addEventListener("click", async () => {
     const url = document.getElementById("setupUrl").value.trim();
     const token = document.getElementById("setupToken").value.trim();
     if (!url || !token) { showToast("Preencha URL e token.", true); return; }
     setConfig(url, token);
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("appMain").classList.remove("hidden");
-    loadPlayers();
+    await loadPlayers();
     loadMatches();
   });
 
   // ── Configurações ─────────────────────────────────────────────────────
-  document.getElementById("cfgSave").addEventListener("click", () => {
+  document.getElementById("cfgSave").addEventListener("click", async () => {
     const url = document.getElementById("cfgUrl").value.trim();
     const token = document.getElementById("cfgToken").value.trim();
     if (!url || !token) { showToast("Preencha URL e token.", true); return; }
     setConfig(url, token);
     showToast("Configurações salvas!");
-    loadPlayers();
+    await loadPlayers();
     loadMatches();
     showSection("secDashboard");
   });
