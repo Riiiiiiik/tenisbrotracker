@@ -319,7 +319,7 @@ body {
   border: 1.5px solid #e5e7eb;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: .88rem;
+  font-size: 16px; /* mínimo 16px — evita zoom automático no iOS */
   color: var(--text);
   background: #fff;
   transition: border-color .2s;
