@@ -38,7 +38,9 @@ const icons = {
 // ── Estado global ─────────────────────────────────────────────────────────
 
 let matches = [];
+let players = [];
 let editingId = null;   // null = criando, number = editando
+let pendingAvatar = null; // base64 da foto selecionada
 
 // ── Helpers de configuração ───────────────────────────────────────────────
 
@@ -83,7 +85,7 @@ async function apiRequest(path, method = "GET", body = null) {
   return data;
 }
 
-// ── CRUD ──────────────────────────────────────────────────────────────────
+// ── CRUD de partidas ──────────────────────────────────────────────────────
 
 async function loadMatches() {
   try {
@@ -115,6 +117,97 @@ async function deleteMatch(id) {
   await apiRequest("/matches/" + id, "DELETE");
   showToast("Confronto excluído.");
   await loadMatches();
+}
+
+// ── CRUD de jogadores ─────────────────────────────────────────────────────
+
+async function loadPlayers() {
+  try {
+    players = await apiRequest("/players");
+    populatePlayerSelects();
+    renderPlayersList();
+  } catch (e) {
+    console.warn("Erro ao carregar jogadores:", e.message);
+  }
+}
+
+async function savePlayer(name, avatar) {
+  await apiRequest("/players", "POST", { name, avatar });
+  showToast("Jogador adicionado!");
+  await loadPlayers();
+}
+
+async function removePlayer(id) {
+  await apiRequest("/players/" + id, "DELETE");
+  showToast("Jogador removido.");
+  await loadPlayers();
+}
+
+// Retorna o avatar base64/URL de um jogador pelo nome
+function getPlayerAvatar(name) {
+  const p = players.find(pl => pl.name === name);
+  return p ? p.avatar : null;
+}
+
+// Redimensiona imagem para thumbnail 128x128 em base64
+function resizeImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const size = 128;
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        // Crop quadrado centralizado
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/webp", 0.7));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Popula os selects de jogador no formulário de match
+function populatePlayerSelects() {
+  const s1 = document.getElementById("fPlayer1");
+  const s2 = document.getElementById("fPlayer2");
+  const cur1 = s1.value;
+  const cur2 = s2.value;
+
+  const opts = players.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
+  s1.innerHTML = `<option value="">Selecione...</option>` + opts;
+  s2.innerHTML = `<option value="">Selecione...</option>` + opts;
+
+  if (cur1) s1.value = cur1;
+  if (cur2) s2.value = cur2;
+  populateWinnerSelect();
+}
+
+// Renderiza lista de jogadores na Config
+function renderPlayersList() {
+  const el = document.getElementById("playersList");
+  if (!players.length) {
+    el.innerHTML = `<div class="state-message" style="padding:16px;">Nenhum jogador cadastrado.</div>`;
+    return;
+  }
+  const userIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  el.innerHTML = players.map(p => `
+    <div class="card player-card">
+      <div class="player-avatar">
+        ${p.avatar ? `<img src="${p.avatar}" alt="${esc(p.name)}">` : userIcon}
+      </div>
+      <div class="player-info">
+        <div class="name">${esc(p.name)}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removePlayer(${p.id})">Remover</button>
+    </div>
+  `).join("");
 }
 
 // ── Navegação ─────────────────────────────────────────────────────────────
@@ -253,14 +346,19 @@ function renderH2H(stats) {
   }
 
   const [p1, p2] = stats.players;
+  const av1 = getPlayerAvatar(p1);
+  const av2 = getPlayerAvatar(p2);
+  const userSvg = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
   el.innerHTML = `
     <div class="h2h-players">
       <div class="h2h-player">
+        <div class="h2h-avatar">${av1 ? `<img src="${av1}" alt="${esc(p1)}">` : userSvg}</div>
         <div class="name">${esc(p1)}</div>
         <div class="wins">${stats.wins[p1]}</div>
       </div>
       <div class="h2h-vs">×</div>
       <div class="h2h-player">
+        <div class="h2h-avatar">${av2 ? `<img src="${av2}" alt="${esc(p2)}">` : userSvg}</div>
         <div class="name">${esc(p2)}</div>
         <div class="wins">${stats.wins[p2]}</div>
       </div>
@@ -363,7 +461,6 @@ function populateWinnerSelect() {
   const p1 = document.getElementById("fPlayer1").value.trim();
   const p2 = document.getElementById("fPlayer2").value.trim();
 
-  // Guardar valor atual para preservar seleção ao editar
   const current = sel.value;
   sel.innerHTML = `<option value="">Selecione...</option>`;
   if (p1) sel.innerHTML += `<option value="${esc(p1)}">${esc(p1)}</option>`;
@@ -377,18 +474,19 @@ function resetForm() {
   document.getElementById("btnSaveMatch").textContent = "Salvar confronto";
   document.getElementById("editActions").classList.add("hidden");
 
-  // Preencher data atual
   document.getElementById("fDate").value = todayISO();
 
-  // Limpar campos de set
   ["fS1P1","fS1P2","fS2P1","fS2P2","fS3P1","fS3P2","fNotes"].forEach(id => {
     document.getElementById(id).value = "";
   });
 
-  // Reutilizar nomes do último confronto
+  // Pré-selecionar jogadores do último confronto
   if (matches.length) {
     document.getElementById("fPlayer1").value = matches[0].player1;
     document.getElementById("fPlayer2").value = matches[0].player2;
+  } else if (players.length >= 2) {
+    document.getElementById("fPlayer1").value = players[0].name;
+    document.getElementById("fPlayer2").value = players[1].name;
   }
 
   document.getElementById("fWinner").value = "";
@@ -498,6 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("appMain").classList.remove("hidden");
+    loadPlayers();
     loadMatches();
   }
 
@@ -509,6 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setConfig(url, token);
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("appMain").classList.remove("hidden");
+    loadPlayers();
     loadMatches();
   });
 
@@ -519,13 +619,39 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!url || !token) { showToast("Preencha URL e token.", true); return; }
     setConfig(url, token);
     showToast("Configurações salvas!");
+    loadPlayers();
     loadMatches();
     showSection("secDashboard");
   });
 
-  // Preencher campos de config com valores atuais
   document.getElementById("cfgUrl").value = getApiUrl();
   document.getElementById("cfgToken").value = getAuthToken();
+
+  // ── Jogadores ─────────────────────────────────────────────────────────
+  document.getElementById("btnPickAvatar").addEventListener("click", () => {
+    document.getElementById("pAvatar").click();
+  });
+
+  document.getElementById("pAvatar").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingAvatar = await resizeImage(file);
+    document.getElementById("avatarPreview").innerHTML = `<img src="${pendingAvatar}">`;
+  });
+
+  document.getElementById("btnSavePlayer").addEventListener("click", async () => {
+    const name = document.getElementById("pName").value.trim();
+    if (!name) { showToast("Digite o nome do jogador.", true); return; }
+    try {
+      await savePlayer(name, pendingAvatar);
+      document.getElementById("pName").value = "";
+      pendingAvatar = null;
+      document.getElementById("avatarPreview").innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+      document.getElementById("pAvatar").value = "";
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  });
 
   // ── Navegação ─────────────────────────────────────────────────────────
   document.querySelectorAll(".nav-btn").forEach(btn => {
@@ -538,9 +664,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ── Formulário ────────────────────────────────────────────────────────
-  // Atualizar select de vencedor quando os nomes mudam
-  document.getElementById("fPlayer1").addEventListener("input", populateWinnerSelect);
-  document.getElementById("fPlayer2").addEventListener("input", populateWinnerSelect);
+  // Atualizar select de vencedor quando os jogadores mudam
+  document.getElementById("fPlayer1").addEventListener("change", populateWinnerSelect);
+  document.getElementById("fPlayer2").addEventListener("change", populateWinnerSelect);
 
   document.getElementById("btnSaveMatch").addEventListener("click", async () => {
     const data = getFormData();

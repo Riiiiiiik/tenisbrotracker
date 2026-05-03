@@ -167,15 +167,81 @@ async function deleteMatch(env, id) {
   return jsonResponse({ message: "Confronto excluído com sucesso." });
 }
 
+// ── Handlers de jogadores ─────────────────────────────────────────────────────
+
+/**
+ * GET /players — lista todos os jogadores
+ */
+async function listPlayers(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM players ORDER BY name ASC`
+  ).all();
+  return jsonResponse(results);
+}
+
+/**
+ * POST /players — cria um novo jogador
+ */
+async function createPlayer(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return errorResponse("Body inválido."); }
+
+  const { name, avatar } = body;
+  if (!name) return errorResponse("Nome do jogador é obrigatório.");
+
+  // Verificar duplicidade
+  const existing = await env.DB.prepare(`SELECT id FROM players WHERE name = ?`).bind(name).first();
+  if (existing) return errorResponse("Já existe um jogador com esse nome.", 409);
+
+  const result = await env.DB.prepare(
+    `INSERT INTO players (name, avatar) VALUES (?, ?)`
+  ).bind(name, avatar ?? null).run();
+
+  const created = await env.DB.prepare(`SELECT * FROM players WHERE id = ?`)
+    .bind(result.meta.last_row_id).first();
+  return jsonResponse(created, 201);
+}
+
+/**
+ * PUT /players/:id — atualiza um jogador
+ */
+async function updatePlayer(request, env, id) {
+  let body;
+  try { body = await request.json(); } catch { return errorResponse("Body inválido."); }
+
+  const existing = await env.DB.prepare(`SELECT id FROM players WHERE id = ?`).bind(id).first();
+  if (!existing) return errorResponse("Jogador não encontrado.", 404);
+
+  const { name, avatar } = body;
+  if (!name) return errorResponse("Nome do jogador é obrigatório.");
+
+  await env.DB.prepare(
+    `UPDATE players SET name = ?, avatar = ? WHERE id = ?`
+  ).bind(name, avatar ?? null, id).run();
+
+  const updated = await env.DB.prepare(`SELECT * FROM players WHERE id = ?`).bind(id).first();
+  return jsonResponse(updated);
+}
+
+/**
+ * DELETE /players/:id — exclui um jogador
+ */
+async function deletePlayer(env, id) {
+  const existing = await env.DB.prepare(`SELECT id FROM players WHERE id = ?`).bind(id).first();
+  if (!existing) return errorResponse("Jogador não encontrado.", 404);
+
+  await env.DB.prepare(`DELETE FROM players WHERE id = ?`).bind(id).run();
+  return jsonResponse({ message: "Jogador excluído." });
+}
+
 // ── Roteador principal ────────────────────────────────────────────────────────
 
 /**
- * Extrai o ID numérico de uma URL como /matches/42
+ * Extrai o ID numérico de uma URL como /matches/42 ou /players/1
  */
-function parseMatchId(pathname) {
+function parseResourceId(pathname, resource) {
   const parts = pathname.split("/").filter(Boolean);
-  // Espera ["matches", "42"]
-  if (parts.length === 2 && parts[0] === "matches") {
+  if (parts.length === 2 && parts[0] === resource) {
     const id = parseInt(parts[1], 10);
     return isNaN(id) ? null : id;
   }
@@ -200,26 +266,28 @@ export default {
     const authError = requireAuth(request, env);
     if (authError) return authError;
 
-    // GET /matches
-    if (method === "GET" && pathname === "/matches") {
-      return listMatches(env);
-    }
-
-    // POST /matches
-    if (method === "POST" && pathname === "/matches") {
-      return createMatch(request, env);
-    }
-
-    // PUT /matches/:id
+    // ── Rotas de matches ──────────────────────────────────────────────────
+    if (method === "GET" && pathname === "/matches") return listMatches(env);
+    if (method === "POST" && pathname === "/matches") return createMatch(request, env);
     if (method === "PUT") {
-      const id = parseMatchId(pathname);
+      const id = parseResourceId(pathname, "matches");
       if (id !== null) return updateMatch(request, env, id);
     }
-
-    // DELETE /matches/:id
     if (method === "DELETE") {
-      const id = parseMatchId(pathname);
-      if (id !== null) return deleteMatch(env, id);
+      const mid = parseResourceId(pathname, "matches");
+      if (mid !== null) return deleteMatch(env, mid);
+    }
+
+    // ── Rotas de players ──────────────────────────────────────────────────
+    if (method === "GET" && pathname === "/players") return listPlayers(env);
+    if (method === "POST" && pathname === "/players") return createPlayer(request, env);
+    if (method === "PUT") {
+      const id = parseResourceId(pathname, "players");
+      if (id !== null) return updatePlayer(request, env, id);
+    }
+    if (method === "DELETE") {
+      const pid = parseResourceId(pathname, "players");
+      if (pid !== null) return deletePlayer(env, pid);
     }
 
     return errorResponse("Rota não encontrada.", 404);
