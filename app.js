@@ -122,9 +122,25 @@ async function deleteMatch(id) {
 
 // ── CRUD de jogadores ─────────────────────────────────────────────────────
 
+const LS_PLAYERS_CACHE = "cc_players_cache";
+
+// Carrega jogadores do cache local instantaneamente, depois atualiza pela API
+function loadPlayersFromCache() {
+  try {
+    const cached = localStorage.getItem(LS_PLAYERS_CACHE);
+    if (cached) {
+      players = JSON.parse(cached);
+      populatePlayerSelects();
+      renderPlayersList();
+    }
+  } catch { /* cache corrompido, ignora */ }
+}
+
 async function loadPlayers() {
   try {
     players = await apiRequest("/players");
+    // Salva no cache local para próxima abertura ser instantânea
+    localStorage.setItem(LS_PLAYERS_CACHE, JSON.stringify(players));
     populatePlayerSelects();
     renderPlayersList();
   } catch (e) {
@@ -761,8 +777,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else {
     document.getElementById("setupScreen").classList.add("hidden");
     document.getElementById("appMain").classList.remove("hidden");
-    await loadPlayers();
+    // Cache local primeiro — avatares aparecem instantaneamente
+    loadPlayersFromCache();
     loadMatches();
+    // API atualiza em background
+    loadPlayers();
     updatePushUI();
   }
 

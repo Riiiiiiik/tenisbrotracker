@@ -1,10 +1,10 @@
 // Service Worker — Court Clash PWA
 // Cache estático + Push Notifications + Atualização
 
-const CACHE_NAME = "court-clash-v7";
+const CACHE_NAME = "court-clash-v8";
 
 // Altere este texto a cada deploy para descrever o que mudou
-const UPDATE_NOTES = "Tema escuro, sistema de torneios com ranking e notificações push.";
+const UPDATE_NOTES = "Avatares nos confrontos, carregamento mais rapido e toggle de tema na aba Config.";
 
 const ASSETS = [
   "./",
