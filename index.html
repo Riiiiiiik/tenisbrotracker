@@ -291,11 +291,51 @@
     </nav>
   </div>
 
+  <!-- Banner de atualização disponível -->
+  <div id="updateBanner" class="update-banner hidden">
+    <span>🔄 Nova versão disponível!</span>
+    <button id="btnUpdate" class="btn btn-yellow btn-sm">Atualizar</button>
+  </div>
+
   <script src="tournament.js"></script>
   <script src="app.js"></script>
   <script>
+    // Registra service worker e detecta atualizações
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      let waitingWorker = null;
+
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        // Verifica se já tem um worker esperando
+        if (reg.waiting) {
+          waitingWorker = reg.waiting;
+          document.getElementById("updateBanner").classList.remove("hidden");
+        }
+
+        // Detecta quando um novo worker está pronto
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              // Novo service worker instalado, mas o antigo ainda controla a página
+              waitingWorker = newWorker;
+              document.getElementById("updateBanner").classList.remove("hidden");
+            }
+          });
+        });
+      }).catch(() => {});
+
+      // Quando o botão "Atualizar" é clicado
+      document.getElementById("btnUpdate").addEventListener("click", () => {
+        if (waitingWorker) {
+          waitingWorker.postMessage("SKIP_WAITING");
+        }
+        document.getElementById("updateBanner").classList.add("hidden");
+      });
+
+      // Recarrega a página quando o novo service worker assume o controle
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
+      });
     }
   </script>
 </body>

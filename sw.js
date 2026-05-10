@@ -1,5 +1,5 @@
 // Service Worker — Court Clash PWA
-// Cache estático para funcionar offline
+// Cache estático + notificação de atualização
 
 const CACHE_NAME = "court-clash-v2";
 const ASSETS = [
@@ -18,7 +18,7 @@ self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
-  self.skipWaiting();
+  // Não chama skipWaiting() aqui — esperamos o usuário decidir atualizar
 });
 
 // Limpa caches antigos
@@ -29,6 +29,13 @@ self.addEventListener("activate", (e) => {
     )
   );
   self.clients.claim();
+});
+
+// Quando o app manda mensagem para pular a espera
+self.addEventListener("message", (e) => {
+  if (e.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // Network-first para API, cache-first para assets estáticos
