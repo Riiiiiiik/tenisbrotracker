@@ -1,7 +1,7 @@
 // Service Worker — Court Clash PWA
 // Cache estático + Push Notifications + Atualização
 
-const CACHE_NAME = "court-clash-v6";
+const CACHE_NAME = "court-clash-v7";
 const ASSETS = [
   "./",
   "./index.html",
