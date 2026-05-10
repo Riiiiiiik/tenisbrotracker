@@ -616,6 +616,102 @@ function confirmDel(id) {
   document.getElementById("confirmOverlay").classList.remove("hidden");
 }
 
+// ── Push Notifications ────────────────────────────────────────────────────
+
+async function updatePushUI() {
+  const btn = document.getElementById("btnTogglePush");
+  const status = document.getElementById("pushStatus");
+  if (!btn || !status) return;
+
+  // Verificar suporte
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger)">❌ Seu navegador não suporta notificações push.</span>`;
+    btn.classList.add("hidden");
+    return;
+  }
+
+  // Verificar permissão
+  const perm = Notification.permission;
+  if (perm === "denied") {
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger)">🚫 Notificações bloqueadas. Desbloqueie nas configurações do navegador.</span>`;
+    btn.classList.add("hidden");
+    return;
+  }
+
+  // Verificar subscription ativa
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+
+  if (sub) {
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--green)">✅ Notificações ativadas</span>`;
+    btn.textContent = "🔕 Desativar notificações";
+    btn.className = "btn btn-outline";
+  } else {
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--text-sec)">Notificações desativadas</span>`;
+    btn.textContent = "🔔 Ativar notificações";
+    btn.className = "btn btn-primary";
+  }
+  btn.classList.remove("hidden");
+}
+
+async function togglePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existingSub = await reg.pushManager.getSubscription();
+
+    if (existingSub) {
+      // Desinscrever
+      await apiRequest("/push/subscribe", "DELETE", { endpoint: existingSub.endpoint });
+      await existingSub.unsubscribe();
+      showToast("Notificações desativadas.");
+    } else {
+      // Pedir permissão
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        showToast("Permissão de notificação negada.", true);
+        return;
+      }
+
+      // Buscar chave VAPID do servidor
+      const { publicKey } = await apiRequest("/push/vapid-key");
+      if (!publicKey) {
+        showToast("Chave VAPID não configurada no servidor.", true);
+        return;
+      }
+
+      // Converter chave VAPID de base64url para Uint8Array
+      const vapidKey = urlBase64ToUint8Array(publicKey);
+
+      // Criar subscription
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidKey,
+      });
+
+      // Enviar subscription para o servidor
+      await apiRequest("/push/subscribe", "POST", {
+        subscription: sub.toJSON(),
+        player_name: players.length ? players[0].name : null,
+      });
+
+      showToast("🔔 Notificações ativadas!");
+    }
+  } catch (e) {
+    showToast("Erro: " + e.message, true);
+  }
+
+  updatePushUI();
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function esc(s) {
@@ -649,11 +745,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("appMain").classList.remove("hidden");
     await loadPlayers();
     loadMatches();
+    updatePushUI();
   }
 
   // Toggle dark mode
   const btnTheme = document.getElementById("btnTheme");
   if (btnTheme) btnTheme.addEventListener("click", toggleTheme);
+
+  // Toggle push notifications
+  document.getElementById("btnTogglePush").addEventListener("click", togglePush);
 
   // ── Tela de setup ──────────────────────────────────────────────────────
   document.getElementById("setupSave").addEventListener("click", async () => {
