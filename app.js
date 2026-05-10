@@ -487,17 +487,8 @@ function renderStats(stats) {
 
 // ── Formulário ────────────────────────────────────────────────────────────
 
-function populateWinnerSelect() {
-  const sel = document.getElementById("fWinner");
-  const p1 = document.getElementById("fPlayer1").value.trim();
-  const p2 = document.getElementById("fPlayer2").value.trim();
-
-  const current = sel.value;
-  sel.innerHTML = `<option value="">Selecione...</option>`;
-  if (p1) sel.innerHTML += `<option value="${esc(p1)}">${esc(p1)}</option>`;
-  if (p2 && p2 !== p1) sel.innerHTML += `<option value="${esc(p2)}">${esc(p2)}</option>`;
-  if (current) sel.value = current;
-}
+// Mantida como no-op para não quebrar chamadas existentes
+function populateWinnerSelect() {}
 
 function resetForm() {
   editingId = null;
@@ -520,8 +511,7 @@ function resetForm() {
     document.getElementById("fPlayer2").value = players[1].name;
   }
 
-  document.getElementById("fWinner").value = "";
-  populateWinnerSelect();
+
 }
 
 function fillFormForEdit(id) {
@@ -547,18 +537,15 @@ function fillFormForEdit(id) {
   document.getElementById("fS5P1").value = m.set5_p1 ?? "";
   document.getElementById("fS5P2").value = m.set5_p2 ?? "";
   document.getElementById("fNotes").value = m.notes || "";
-
-  populateWinnerSelect();
-  document.getElementById("fWinner").value = m.winner;
 }
 
 function getFormData() {
   const p1 = document.getElementById("fPlayer1").value.trim();
   const p2 = document.getElementById("fPlayer2").value.trim();
   const dt = document.getElementById("fDate").value;
-  const w  = document.getElementById("fWinner").value;
 
   if (!p1 || !p2) { showToast("Preencha os dois jogadores.", true); return null; }
+  if (p1 === p2)  { showToast("Selecione jogadores diferentes.", true); return null; }
   if (!dt)        { showToast("Preencha a data.", true); return null; }
 
   const s1p1 = parseInt(document.getElementById("fS1P1").value);
@@ -571,14 +558,32 @@ function getFormData() {
     return null;
   }
 
-  if (!w) { showToast("Selecione o vencedor.", true); return null; }
-
   const s3p1 = document.getElementById("fS3P1").value;
   const s3p2 = document.getElementById("fS3P2").value;
   const s4p1 = document.getElementById("fS4P1").value;
   const s4p2 = document.getElementById("fS4P2").value;
   const s5p1 = document.getElementById("fS5P1").value;
   const s5p2 = document.getElementById("fS5P2").value;
+
+  // Calcular vencedor automaticamente pelos sets
+  let setsP1 = 0, setsP2 = 0;
+  const sets = [
+    [s1p1, s1p2], [s2p1, s2p2],
+    [s3p1, s3p2], [s4p1, s4p2], [s5p1, s5p2]
+  ];
+  for (const [a, b] of sets) {
+    const sa = parseInt(a), sb = parseInt(b);
+    if (isNaN(sa) || isNaN(sb)) continue;
+    if (sa > sb) setsP1++;
+    else if (sb > sa) setsP2++;
+  }
+
+  if (setsP1 === setsP2) {
+    showToast("Empate em sets — preencha o set decisivo.", true);
+    return null;
+  }
+
+  const winner = setsP1 > setsP2 ? p1 : p2;
 
   return {
     player1: p1,
@@ -592,7 +597,7 @@ function getFormData() {
     set4_p2: s4p2 !== "" ? parseInt(s4p2) : null,
     set5_p1: s5p1 !== "" ? parseInt(s5p1) : null,
     set5_p2: s5p2 !== "" ? parseInt(s5p2) : null,
-    winner: w,
+    winner,
     notes: document.getElementById("fNotes").value.trim() || null,
   };
 }
