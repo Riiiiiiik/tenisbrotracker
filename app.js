@@ -416,24 +416,35 @@ function renderMatchesList() {
     return;
   }
 
-  el.innerHTML = matches.map(m => `
+  const userSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
+  el.innerHTML = matches.map(m => {
+    const av1 = getPlayerAvatar(m.player1);
+    const av2 = getPlayerAvatar(m.player2);
+    return `
     <div class="card match-card">
       <div class="match-header">
         <span class="match-date">${formatDateBR(m.match_date)}</span>
         <span class="match-badge badge-winner">${icons.trophy()} ${esc(m.winner)}</span>
       </div>
       <div class="match-body">
-        <div class="player-name ${m.winner === m.player1 ? "is-winner" : ""}">${esc(m.player1)}</div>
+        <div class="match-player ${m.winner === m.player1 ? "is-winner" : ""}">
+          <div class="match-avatar">${av1 ? `<img src="${av1}" alt="${esc(m.player1)}">` : userSvg}</div>
+          <span>${esc(m.player1)}</span>
+        </div>
         <div class="score">${formatScore(m)}</div>
-        <div class="player-name ${m.winner === m.player2 ? "is-winner" : ""}">${esc(m.player2)}</div>
+        <div class="match-player ${m.winner === m.player2 ? "is-winner" : ""}">
+          <span>${esc(m.player2)}</span>
+          <div class="match-avatar">${av2 ? `<img src="${av2}" alt="${esc(m.player2)}">` : userSvg}</div>
+        </div>
       </div>
       ${m.notes ? `<div class="match-notes">"${esc(m.notes)}"</div>` : ""}
       <div class="match-actions">
         <button class="btn btn-outline btn-sm" onclick="startEdit(${m.id})">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDel(${m.id})">Excluir</button>
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 }
 
 function renderStats(stats) {

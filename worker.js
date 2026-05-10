@@ -132,7 +132,7 @@ async function createMatch(request, env) {
   // Disparar push notification para todos os inscritos (em background)
   const scoreText = formatMatchScore(created);
   const pushPayload = {
-    title: `🎾 ${winner} venceu!`,
+    title: `${winner} venceu!`,
     body: `${player1} vs ${player2} — ${scoreText}`,
     icon: "./icon-192.png",
   };

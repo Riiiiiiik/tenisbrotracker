@@ -2,6 +2,10 @@
 // Cache estático + Push Notifications + Atualização
 
 const CACHE_NAME = "court-clash-v7";
+
+// Altere este texto a cada deploy para descrever o que mudou
+const UPDATE_NOTES = "Tema escuro, sistema de torneios com ranking e notificações push.";
+
 const ASSETS = [
   "./",
   "./index.html",
@@ -16,7 +20,18 @@ const ASSETS = [
 // Instala e faz cache dos assets estáticos
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(ASSETS);
+      // Se já existia um SW controlando (é atualização, não primeiro acesso)
+      if (self.registration.active) {
+        self.registration.showNotification("Court Clash atualizado", {
+          body: UPDATE_NOTES,
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          tag: "app-update",
+        });
+      }
+    })
   );
 });
 

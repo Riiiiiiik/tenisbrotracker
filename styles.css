@@ -69,10 +69,12 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
 .match-date{font-size:.75rem;color:var(--text-sec);font-weight:500}
 .match-badge{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;display:inline-flex;align-items:center;gap:4px}
 .badge-winner{background:var(--yellow);color:var(--green-dark)}
-.match-body{text-align:center;margin-bottom:12px}
-.match-body .player-name{font-size:.82rem;font-weight:600}
-.match-body .player-name.is-winner{color:var(--green)}
-.match-body .score{font-size:1.15rem;font-weight:800;color:var(--text);margin:6px 0;letter-spacing:1.5px}
+.match-body{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px}
+.match-player{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600}
+.match-player.is-winner{color:var(--green)}
+.match-avatar{width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-sec)}
+.match-avatar img{width:100%;height:100%;object-fit:cover}
+.match-body .score{font-size:1rem;font-weight:800;color:var(--text);letter-spacing:1px;white-space:nowrap}
 .match-notes{font-size:.75rem;color:var(--text-sec);font-style:italic;margin-bottom:12px;text-align:center}
 .match-actions{display:flex;gap:8px;justify-content:flex-end}
 
