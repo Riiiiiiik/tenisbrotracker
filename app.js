@@ -238,11 +238,6 @@ function showSection(id) {
     document.getElementById("editActions").classList.add("hidden");
   }
 
-  // Carregar torneios ao abrir Stats
-  if (id === "secStats" && typeof loadTournaments === "function") {
-    loadTournaments();
-  }
-
   ["secDashboard", "secForm", "secStats", "secSettings"].forEach(s => {
     document.getElementById(s).classList.toggle("hidden", s !== id);
   });
@@ -251,8 +246,45 @@ function showSection(id) {
     btn.classList.toggle("active", btn.dataset.sec === id);
   });
 
+  // Carregar torneios ao abrir Stats
+  if (id === "secStats" && typeof loadTournaments === "function") {
+    loadTournaments();
+  }
+
+  // Carregar sessões recentes ao abrir Dashboard
+  if (id === "secDashboard" && typeof loadRecentSessions === "function") {
+    loadRecentSessions();
+  }
+
+  // Preparar form de sessão rápida ao abrir Novo
+  if (id === "secForm" && typeof renderQuickSessionForm === "function") {
+    renderQuickSessionForm();
+  }
+
   // Scroll para o topo ao trocar de seção
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ── Toggle de modo (Confronto Padrão / Sessão Rápida) ─────────────────────
+
+function switchMode(mode) {
+  const standard = document.getElementById("standardForm");
+  const quick = document.getElementById("quickSessionMode");
+  const btnStd = document.getElementById("modeStandard");
+  const btnQck = document.getElementById("modeQuick");
+
+  if (mode === "quick") {
+    standard.classList.add("hidden");
+    quick.classList.remove("hidden");
+    btnStd.classList.remove("active");
+    btnQck.classList.add("active");
+    renderQuickSessionForm();
+  } else {
+    standard.classList.remove("hidden");
+    quick.classList.add("hidden");
+    btnStd.classList.add("active");
+    btnQck.classList.remove("active");
+  }
 }
 
 // ── Formatação de placar ──────────────────────────────────────────────────
@@ -782,6 +814,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadMatches();
     // API atualiza em background
     loadPlayers();
+    loadRecentSessions();
     updatePushUI();
   }
 

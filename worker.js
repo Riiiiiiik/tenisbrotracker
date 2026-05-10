@@ -804,6 +804,99 @@ function buildInfo(type, clientPublic, serverPublic) {
   return info;
 }
 
+// ── Sessões Rápidas ────────────────────────────────────────────────────────
+
+async function createSession(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return errorResponse("Body inválido."); }
+
+  const { games_to_win, prize, players: playerNames } = body;
+  if (!playerNames || playerNames.length < 2) {
+    return errorResponse("Selecione pelo menos 2 jogadores.");
+  }
+
+  const result = await env.DB.prepare(
+    `INSERT INTO quick_sessions (games_to_win, prize) VALUES (?, ?)`
+  ).bind(games_to_win || 3, prize || null).run();
+
+  const sessionId = result.meta.last_row_id;
+
+  for (const name of playerNames) {
+    await env.DB.prepare(
+      `INSERT INTO quick_session_players (session_id, player_name) VALUES (?, ?)`
+    ).bind(sessionId, name).run();
+  }
+
+  return getSession(env, sessionId);
+}
+
+async function listSessions(env) {
+  const sessions = await env.DB.prepare(
+    `SELECT * FROM quick_sessions ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, id DESC LIMIT 20`
+  ).all();
+
+  const result = [];
+  for (const s of sessions.results) {
+    const players = await env.DB.prepare(
+      `SELECT player_name, wins FROM quick_session_players WHERE session_id = ? ORDER BY wins DESC`
+    ).bind(s.id).all();
+    result.push({ ...s, players: players.results });
+  }
+
+  return jsonResponse(result);
+}
+
+async function getSession(env, id) {
+  const session = await env.DB.prepare(`SELECT * FROM quick_sessions WHERE id = ?`).bind(id).first();
+  if (!session) return errorResponse("Sessão não encontrada.", 404);
+
+  const players = await env.DB.prepare(
+    `SELECT player_name, wins FROM quick_session_players WHERE session_id = ? ORDER BY wins DESC`
+  ).bind(id).all();
+
+  return jsonResponse({ ...session, players: players.results });
+}
+
+async function updateSessionScore(request, env, id) {
+  let body;
+  try { body = await request.json(); } catch { return errorResponse("Body inválido."); }
+
+  const { player_name, delta } = body;
+  if (!player_name || delta === undefined) {
+    return errorResponse("player_name e delta obrigatórios.");
+  }
+
+  // Verificar se sessão está ativa
+  const session = await env.DB.prepare(`SELECT status FROM quick_sessions WHERE id = ?`).bind(id).first();
+  if (!session) return errorResponse("Sessão não encontrada.", 404);
+  if (session.status !== "active") return errorResponse("Sessão já finalizada.");
+
+  await env.DB.prepare(
+    `UPDATE quick_session_players SET wins = MAX(0, wins + ?) WHERE session_id = ? AND player_name = ?`
+  ).bind(delta, id, player_name).run();
+
+  return getSession(env, id);
+}
+
+async function finishSessionRoute(env, id) {
+  await env.DB.prepare(
+    `UPDATE quick_sessions SET status = 'finished', finished_at = datetime('now') WHERE id = ?`
+  ).bind(id).run();
+  return getSession(env, id);
+}
+
+async function deleteSessionRoute(env, id) {
+  await env.DB.prepare(`DELETE FROM quick_session_players WHERE session_id = ?`).bind(id).run();
+  await env.DB.prepare(`DELETE FROM quick_sessions WHERE id = ?`).bind(id).run();
+  return jsonResponse({ message: "Sessão excluída." });
+}
+
+function parseSessionSubRoute(pathname) {
+  const m = pathname.match(/^\/sessions\/(\d+)\/(score|finish)$/);
+  if (m) return { id: parseInt(m[1]), sub: m[2] };
+  return null;
+}
+
 
 /**
  * Extrai o ID numérico de uma URL como /matches/42 ou /players/1
@@ -921,6 +1014,22 @@ export default {
     if (method === "GET" && pathname === "/push/vapid-key") return getVapidKey(env);
     if (method === "POST" && pathname === "/push/subscribe") return subscribePush(request, env);
     if (method === "DELETE" && pathname === "/push/subscribe") return unsubscribePush(request, env);
+
+    // ── Rotas de sessões rápidas ───────────────────────────────────────────
+    if (method === "GET" && pathname === "/sessions") return listSessions(env);
+    if (method === "POST" && pathname === "/sessions") return createSession(request, env);
+
+    const sessionSub = parseSessionSubRoute(pathname);
+    if (sessionSub) {
+      if (sessionSub.sub === "score" && method === "PUT") return updateSessionScore(request, env, sessionSub.id);
+      if (sessionSub.sub === "finish" && method === "PUT") return finishSessionRoute(env, sessionSub.id);
+    }
+
+    const sessionId = parseResourceId(pathname, "sessions");
+    if (sessionId !== null) {
+      if (method === "GET") return getSession(env, sessionId);
+      if (method === "DELETE") return deleteSessionRoute(env, sessionId);
+    }
 
     return errorResponse("Rota não encontrada.", 404);
   },
