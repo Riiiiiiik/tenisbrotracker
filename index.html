@@ -421,24 +421,33 @@
     if ("serviceWorker" in navigator) {
       let waitingWorker = null;
 
+      function showUpdateBanner(worker) {
+        waitingWorker = worker;
+        document.getElementById("updateBanner").classList.remove("hidden");
+      }
+
       navigator.serviceWorker.register("sw.js").then((reg) => {
         // Verifica se já tem um worker esperando
         if (reg.waiting) {
-          waitingWorker = reg.waiting;
-          document.getElementById("updateBanner").classList.remove("hidden");
+          showUpdateBanner(reg.waiting);
         }
 
         // Detecta quando um novo worker está pronto
         reg.addEventListener("updatefound", () => {
           const newWorker = reg.installing;
+          if (!newWorker) return;
           newWorker.addEventListener("statechange", () => {
             if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-              // Novo service worker instalado, mas o antigo ainda controla a página
-              waitingWorker = newWorker;
-              document.getElementById("updateBanner").classList.remove("hidden");
+              showUpdateBanner(newWorker);
             }
           });
         });
+
+        // Força verificação de atualização ao abrir
+        reg.update();
+
+        // Verifica atualizações a cada 60 segundos (importante para iOS)
+        setInterval(() => reg.update(), 60 * 1000);
       }).catch(() => { });
 
       // Quando o botão "Atualizar" é clicado
