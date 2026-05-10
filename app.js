@@ -625,7 +625,7 @@ async function updatePushUI() {
 
   // Verificar suporte
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger)">❌ Seu navegador não suporta notificações push.</span>`;
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger);display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Seu navegador não suporta notificações push.</span>`;
     btn.classList.add("hidden");
     return;
   }
@@ -633,7 +633,7 @@ async function updatePushUI() {
   // Verificar permissão
   const perm = Notification.permission;
   if (perm === "denied") {
-    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger)">🚫 Notificações bloqueadas. Desbloqueie nas configurações do navegador.</span>`;
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--danger);display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Notificações bloqueadas. Desbloqueie nas configurações do navegador.</span>`;
     btn.classList.add("hidden");
     return;
   }
@@ -643,12 +643,12 @@ async function updatePushUI() {
   const sub = await reg.pushManager.getSubscription();
 
   if (sub) {
-    status.innerHTML = `<span style="font-size:.78rem;color:var(--green)">✅ Notificações ativadas</span>`;
-    btn.textContent = "🔕 Desativar notificações";
+    status.innerHTML = `<span style="font-size:.78rem;color:var(--green);display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Notificações ativadas</span>`;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Desativar notificações';
     btn.className = "btn btn-outline";
   } else {
     status.innerHTML = `<span style="font-size:.78rem;color:var(--text-sec)">Notificações desativadas</span>`;
-    btn.textContent = "🔔 Ativar notificações";
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Ativar notificações';
     btn.className = "btn btn-primary";
   }
   btn.classList.remove("hidden");
@@ -694,7 +694,7 @@ async function togglePush() {
         player_name: players.length ? players[0].name : null,
       });
 
-      showToast("🔔 Notificações ativadas!");
+      showToast("Notificações ativadas!");
     }
   } catch (e) {
     showToast("Erro: " + e.message, true);

@@ -7,6 +7,18 @@ let tournaments = [];
 let activeTournamentId = null;
 let pendingDeleteTournamentId = null;
 
+// SVGs reutilizáveis para o torneio (evita emojis inconsistentes entre plataformas)
+const tIcons = {
+  calendar: '<svg class="t-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  clock: '<svg class="t-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  trophy: '<svg class="t-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 3h10v5a5 5 0 0 1-10 0V3z"/></svg>',
+  active: '<svg class="t-icon" viewBox="0 0 24 24" width="12" height="12" fill="var(--yellow)" stroke="none"><circle cx="12" cy="12" r="6"/></svg>',
+  finished: '<svg class="t-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+  gold: '<svg class="rank-medal-svg gold" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9" fill="#FFD700" stroke="#DAA520"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#8B6914">1</text></svg>',
+  silver: '<svg class="rank-medal-svg silver" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9" fill="#C0C0C0" stroke="#A0A0A0"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#555">2</text></svg>',
+  bronze: '<svg class="rank-medal-svg bronze" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9" fill="#CD7F32" stroke="#A0662B"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#5C3317">3</text></svg>',
+};
+
 // ── CRUD de torneios ──────────────────────────────────────────────────────
 
 async function loadTournaments() {
@@ -177,11 +189,11 @@ function renderTournamentRanking(data) {
     <div class="tournament-info-card">
       <div class="t-name">${esc(t.name)}</div>
       <div class="t-meta">
-        <span>📅 ${formatDateBR(t.start_date)} → ${formatDateBR(t.end_date)}</span>
-        <span>⏱ ${durLabel} · ${data.matches_count} partida${data.matches_count !== 1 ? "s" : ""}</span>
+        <span>${tIcons.calendar} ${formatDateBR(t.start_date)} → ${formatDateBR(t.end_date)}</span>
+        <span>${tIcons.clock} ${durLabel} · ${data.matches_count} partida${data.matches_count !== 1 ? "s" : ""}</span>
       </div>
-      ${t.prize ? `<span class="t-prize">🏆 ${esc(t.prize)}</span>` : ""}
-      <span class="t-status ${t.status}">${t.status === "active" ? "🟢 Ativo" : "🏁 Finalizado"}</span>
+      ${t.prize ? `<span class="t-prize">${tIcons.trophy} ${esc(t.prize)}</span>` : ""}
+      <span class="t-status ${t.status}">${t.status === "active" ? tIcons.active + " Ativo" : tIcons.finished + " Finalizado"}</span>
       <div class="tournament-actions">
         ${t.status === "active" ? `<button class="btn" onclick="finishTournament(${t.id})">Finalizar</button>` : ""}
         <button class="btn btn-del" onclick="confirmDelTournament(${t.id})">Excluir</button>
@@ -216,7 +228,7 @@ function renderTournamentRanking(data) {
   if (!ranking.length || ranking.every(r => r.matches_played === 0)) {
     html += `<div class="ranking-empty" style="margin-top:16px">Nenhuma partida válida no período ainda.</div>`;
   } else {
-    const medals = ["🥇", "🥈", "🥉"];
+    const medals = [tIcons.gold, tIcons.silver, tIcons.bronze];
     html += `<table class="ranking-table" style="margin-top:16px">
       <thead><tr>
         <th>#</th><th>Jogador</th><th>PTS</th><th>V</th><th>D</th><th>Sets</th><th>Games</th>
