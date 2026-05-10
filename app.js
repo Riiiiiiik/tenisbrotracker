@@ -7,6 +7,7 @@
 
 const LS_API_URL = "cc_api_url";
 const LS_TOKEN   = "cc_token";
+const LS_THEME   = "cc_theme";
 
 // ── Ícones SVG reutilizáveis (Feather-style) ──────────────────────────────
 
@@ -221,6 +222,11 @@ function showSection(id) {
     document.getElementById("editActions").classList.add("hidden");
   }
 
+  // Carregar torneios ao abrir Stats
+  if (id === "secStats" && typeof loadTournaments === "function") {
+    loadTournaments();
+  }
+
   ["secDashboard", "secForm", "secStats", "secSettings"].forEach(s => {
     document.getElementById(s).classList.toggle("hidden", s !== id);
   });
@@ -237,10 +243,35 @@ function showSection(id) {
 
 function formatScore(m) {
   let s = `${m.set1_p1}-${m.set1_p2}, ${m.set2_p1}-${m.set2_p2}`;
-  if (m.set3_p1 !== null && m.set3_p2 !== null) {
-    s += `, ${m.set3_p1}-${m.set3_p2}`;
-  }
+  if (m.set3_p1 !== null && m.set3_p2 !== null) s += `, ${m.set3_p1}-${m.set3_p2}`;
+  if (m.set4_p1 !== null && m.set4_p2 !== null) s += `, ${m.set4_p1}-${m.set4_p2}`;
+  if (m.set5_p1 !== null && m.set5_p2 !== null) s += `, ${m.set5_p1}-${m.set5_p2}`;
   return s;
+}
+
+// ── Dark Mode ─────────────────────────────────────────────────────────────
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem(LS_THEME, next);
+  updateThemeIcon();
+}
+
+function applyStoredTheme() {
+  const stored = localStorage.getItem(LS_THEME);
+  if (stored === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const btn = document.getElementById("btnTheme");
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  btn.innerHTML = isDark
+    ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 }
 
 // ── Cálculo de estatísticas ───────────────────────────────────────────────
@@ -476,7 +507,7 @@ function resetForm() {
 
   document.getElementById("fDate").value = todayISO();
 
-  ["fS1P1","fS1P2","fS2P1","fS2P2","fS3P1","fS3P2","fNotes"].forEach(id => {
+  ["fS1P1","fS1P2","fS2P1","fS2P2","fS3P1","fS3P2","fS4P1","fS4P2","fS5P1","fS5P2","fNotes"].forEach(id => {
     document.getElementById(id).value = "";
   });
 
@@ -511,6 +542,10 @@ function fillFormForEdit(id) {
   document.getElementById("fS2P2").value = m.set2_p2;
   document.getElementById("fS3P1").value = m.set3_p1 ?? "";
   document.getElementById("fS3P2").value = m.set3_p2 ?? "";
+  document.getElementById("fS4P1").value = m.set4_p1 ?? "";
+  document.getElementById("fS4P2").value = m.set4_p2 ?? "";
+  document.getElementById("fS5P1").value = m.set5_p1 ?? "";
+  document.getElementById("fS5P2").value = m.set5_p2 ?? "";
   document.getElementById("fNotes").value = m.notes || "";
 
   populateWinnerSelect();
@@ -540,6 +575,10 @@ function getFormData() {
 
   const s3p1 = document.getElementById("fS3P1").value;
   const s3p2 = document.getElementById("fS3P2").value;
+  const s4p1 = document.getElementById("fS4P1").value;
+  const s4p2 = document.getElementById("fS4P2").value;
+  const s5p1 = document.getElementById("fS5P1").value;
+  const s5p2 = document.getElementById("fS5P2").value;
 
   return {
     player1: p1,
@@ -549,6 +588,10 @@ function getFormData() {
     set2_p1: s2p1, set2_p2: s2p2,
     set3_p1: s3p1 !== "" ? parseInt(s3p1) : null,
     set3_p2: s3p2 !== "" ? parseInt(s3p2) : null,
+    set4_p1: s4p1 !== "" ? parseInt(s4p1) : null,
+    set4_p2: s4p2 !== "" ? parseInt(s4p2) : null,
+    set5_p1: s5p1 !== "" ? parseInt(s5p1) : null,
+    set5_p2: s5p2 !== "" ? parseInt(s5p2) : null,
     winner: w,
     notes: document.getElementById("fNotes").value.trim() || null,
   };
@@ -589,6 +632,9 @@ function formatDateBR(iso) {
 // ── Inicialização ─────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Aplicar tema salvo
+  applyStoredTheme();
+
   // Decidir tela inicial
   if (!isConfigured()) {
     document.getElementById("setupScreen").classList.remove("hidden");
@@ -599,6 +645,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadPlayers();
     loadMatches();
   }
+
+  // Toggle dark mode
+  const btnTheme = document.getElementById("btnTheme");
+  if (btnTheme) btnTheme.addEventListener("click", toggleTheme);
 
   // ── Tela de setup ──────────────────────────────────────────────────────
   document.getElementById("setupSave").addEventListener("click", async () => {
@@ -702,6 +752,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast(e.message, true);
       }
       pendingDeleteId = null;
+    }
+  });
+
+  // ── Torneios ──────────────────────────────────────────────────────────
+  document.getElementById("btnShowCreateTournament").addEventListener("click", () => {
+    populateTournamentPlayersForm();
+    document.getElementById("tStartDate").value = todayISO();
+    document.getElementById("tournamentForm").classList.remove("hidden");
+  });
+
+  document.getElementById("btnCancelTournament").addEventListener("click", () => {
+    document.getElementById("tournamentForm").classList.add("hidden");
+  });
+
+  document.getElementById("btnCreateTournament").addEventListener("click", createTournamentFromForm);
+
+  document.getElementById("selTournament").addEventListener("change", (e) => {
+    const id = parseInt(e.target.value);
+    if (id) {
+      activeTournamentId = id;
+      loadTournamentRanking(id);
+    }
+  });
+
+  // Confirmação de exclusão de torneio
+  document.getElementById("confirmTournamentCancel").addEventListener("click", () => {
+    pendingDeleteTournamentId = null;
+    document.getElementById("confirmTournamentOverlay").classList.add("hidden");
+  });
+
+  document.getElementById("confirmTournamentDelete").addEventListener("click", async () => {
+    document.getElementById("confirmTournamentOverlay").classList.add("hidden");
+    if (pendingDeleteTournamentId !== null) {
+      await deleteTournament(pendingDeleteTournamentId);
+      pendingDeleteTournamentId = null;
     }
   });
 });

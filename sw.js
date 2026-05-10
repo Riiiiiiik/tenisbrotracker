@@ -1,11 +1,12 @@
 // Service Worker — Court Clash PWA
 // Cache estático para funcionar offline
 
-const CACHE_NAME = "court-clash-v1";
+const CACHE_NAME = "court-clash-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./tournament.js",
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
