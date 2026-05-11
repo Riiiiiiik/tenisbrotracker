@@ -27,12 +27,23 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
 });
 
-// Limpa caches antigos e assume controle de todas as abas
+// Limpa caches antigos, assume controle e notifica atualização
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys().then(async (keys) => {
+      const oldKeys = keys.filter((k) => k !== CACHE_NAME);
+      await Promise.all(oldKeys.map((k) => caches.delete(k)));
+
+      // Notifica na barra do sistema se é atualização (existiam caches antigos)
+      if (oldKeys.length > 0) {
+        await self.registration.showNotification("Court Clash atualizado", {
+          body: UPDATE_NOTES,
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          tag: "app-update-" + CACHE_NAME,
+        });
+      }
+    })
   );
   self.clients.claim();
 });
