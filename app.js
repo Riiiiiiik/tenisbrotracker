@@ -504,21 +504,41 @@ function renderStats(stats) {
   }
 
   const [p1, p2] = stats.players;
+  const av1 = getPlayerAvatar(p1);
+  const av2 = getPlayerAvatar(p2);
+  const userSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const totalW = stats.wins[p1] + stats.wins[p2] || 1;
+  const pct1 = Math.round((stats.wins[p1] / totalW) * 100);
+  const pct2 = 100 - pct1;
 
   el.innerHTML = `
+    <!-- Card hero com total -->
+    <div class="stats-hero">
+      <div class="stats-hero-number">${stats.totalMatches}</div>
+      <div class="stats-hero-label">partidas disputadas</div>
+    </div>
+
+    <!-- Barra comparativa de vitórias -->
+    <div class="card stats-versus">
+      <div class="sv-row">
+        <div class="sv-player">
+          <div class="sv-avatar">${av1 ? `<img src="${av1}" alt="${esc(p1)}">` : userSvg}</div>
+          <span>${esc(p1)}</span>
+        </div>
+        <div class="sv-score">${stats.wins[p1]} × ${stats.wins[p2]}</div>
+        <div class="sv-player sv-right">
+          <span>${esc(p2)}</span>
+          <div class="sv-avatar">${av2 ? `<img src="${av2}" alt="${esc(p2)}">` : userSvg}</div>
+        </div>
+      </div>
+      <div class="sv-bar">
+        <div class="sv-bar-fill sv-fill-1" style="width:${pct1}%">${pct1}%</div>
+        <div class="sv-bar-fill sv-fill-2" style="width:${pct2}%">${pct2}%</div>
+      </div>
+    </div>
+
+    <!-- Stats grid compact -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value">${stats.totalMatches}</div>
-        <div class="stat-label">Total de partidas</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.wins[p1]}</div>
-        <div class="stat-label">Vitórias ${esc(p1)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.wins[p2]}</div>
-        <div class="stat-label">Vitórias ${esc(p2)}</div>
-      </div>
       <div class="stat-card">
         <div class="stat-value">${stats.winRate[p1]}%</div>
         <div class="stat-label">Win rate ${esc(p1)}</div>
@@ -529,23 +549,35 @@ function renderStats(stats) {
       </div>
       <div class="stat-card">
         <div class="stat-value">${stats.currentStreakCount}</div>
-        <div class="stat-label">Sequência de ${esc(stats.currentStreakPlayer)}</div>
+        <div class="stat-label">Sequencia atual de ${esc(stats.currentStreakPlayer)}</div>
       </div>
-      <div class="stat-card full">
+      <div class="stat-card">
         <div class="stat-value">${stats.biggestStreakCount}</div>
-        <div class="stat-label">Maior sequência — ${esc(stats.biggestStreakPlayer)}</div>
+        <div class="stat-label">Maior sequencia de ${esc(stats.biggestStreakPlayer)}</div>
       </div>
     </div>
 
-    <h3 class="section-title" style="margin-top:24px;">${icons.trendUp()} Forma recente (últimos 5)</h3>
-    <div class="card">
-      <p style="font-size:.82rem;font-weight:600;margin-bottom:8px;">${esc(p1)}</p>
-      <div class="form-recent">
-        ${stats.recentForm[p1].map(r => `<span class="form-dot ${r === "V" ? "w" : "l"}">${r}</span>`).join("")}
+    <!-- Forma recente -->
+    <h3 class="section-title" style="margin-top:24px;">${icons.trendUp()} Forma recente</h3>
+    <div class="card stats-form-card">
+      <div class="stats-form-row">
+        <div class="stats-form-player">
+          <div class="sv-avatar sm">${av1 ? `<img src="${av1}" alt="${esc(p1)}">` : userSvg}</div>
+          <span>${esc(p1)}</span>
+        </div>
+        <div class="form-recent">
+          ${stats.recentForm[p1].map(r => `<span class="form-dot ${r === "V" ? "w" : "l"}">${r}</span>`).join("")}
+        </div>
       </div>
-      <p style="font-size:.82rem;font-weight:600;margin:14px 0 8px;">${esc(p2)}</p>
-      <div class="form-recent">
-        ${stats.recentForm[p2].map(r => `<span class="form-dot ${r === "V" ? "w" : "l"}">${r}</span>`).join("")}
+      <div class="stats-form-divider"></div>
+      <div class="stats-form-row">
+        <div class="stats-form-player">
+          <div class="sv-avatar sm">${av2 ? `<img src="${av2}" alt="${esc(p2)}">` : userSvg}</div>
+          <span>${esc(p2)}</span>
+        </div>
+        <div class="form-recent">
+          ${stats.recentForm[p2].map(r => `<span class="form-dot ${r === "V" ? "w" : "l"}">${r}</span>`).join("")}
+        </div>
       </div>
     </div>
   `;
