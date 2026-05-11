@@ -478,56 +478,39 @@ function calculateCocaTracker(matchList) {
   const p1 = sorted[0].player1;
   const p2 = sorted[0].player2;
 
-  // Alternância começa com o VENCEDOR do primeiro jogo pagando
+  // Alternância começa com o VENCEDOR do primeiro jogo
   let normalTurn = sorted[0].winner;
   const history = [];
 
-  // Contadores de vitórias acumuladas
-  const runningWins = {};
-  runningWins[p1] = 0;
-  runningWins[p2] = 0;
-
   sorted.forEach((m, i) => {
-    runningWins[m.winner]++;
     const loser = m.winner === p1 ? p2 : p1;
+    const sweep = isSweep(m);
+    let payer;
 
-    // Alternância normal: quem é a vez, paga
-    const payer = normalTurn;
-    // Avança a alternância
-    normalTurn = normalTurn === p1 ? p2 : p1;
+    if (sweep && normalTurn === m.winner) {
+      // Regra do 2-0: era a vez do vencedor pagar, mas ele ganhou de 2-0
+      // Então o perdedor paga e a alternância NÃO avança
+      payer = loser;
+    } else {
+      // Alternância normal
+      payer = normalTurn;
+      normalTurn = normalTurn === p1 ? p2 : p1;
+    }
 
     history.push({
       match: m,
       payer,
+      sweep,
       round: i + 1,
     });
   });
-
-  // Verificar regra do 2-0 geral: se o H2H está X-0 (com X >= 2), o perdedor paga
-  const totalWins = {};
-  totalWins[p1] = sorted.filter(m => m.winner === p1).length;
-  totalWins[p2] = sorted.filter(m => m.winner === p2).length;
-
-  let nextPayer = normalTurn;
-  let overrideActive = false;
-
-  // Se um dos dois está zerado e o outro tem 2+, o que está zerado paga
-  if (totalWins[p1] >= 2 && totalWins[p2] === 0) {
-    nextPayer = p2;
-    overrideActive = true;
-  } else if (totalWins[p2] >= 2 && totalWins[p1] === 0) {
-    nextPayer = p1;
-    overrideActive = true;
-  }
 
   const cocaCount = {};
   cocaCount[p1] = history.filter(h => h.payer === p1).length;
   cocaCount[p2] = history.filter(h => h.payer === p2).length;
 
   return {
-    nextPayer,
-    nextTurn: normalTurn,
-    overrideActive,
+    nextPayer: normalTurn,
     history,
     cocaCount,
     players: [p1, p2],
@@ -553,11 +536,11 @@ function renderCocaTracker(matchList) {
       <div class="coca-current">
         <span class="coca-label">Proximo a pagar:</span>
         <strong class="coca-payer">${esc(coca.nextPayer)}</strong>
-        ${coca.overrideActive ? `<span class="coca-sweep">regra 2-0</span>` : ""}
       </div>
       <div class="coca-current">
         <span class="coca-label">Ultimo pagou:</span>
         <strong>${esc(lastH.payer)}</strong>
+        ${lastH.sweep ? `<span class="coca-sweep">2-0</span>` : ""}
       </div>
       <div class="coca-score">
         <span>${esc(p1)}: <strong>${coca.cocaCount[p1]}</strong> cocas</span>

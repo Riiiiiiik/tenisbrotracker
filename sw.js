@@ -1,7 +1,7 @@
 // Service Worker — Court Clash PWA
 // Cache estático + Push Notifications + Atualização
 
-const CACHE_NAME = "court-clash-v12";
+const CACHE_NAME = "court-clash-v13";
 
 // Altere este texto a cada deploy para descrever o que mudou
 const UPDATE_NOTES = "Correcao de notificacao duplicada e editar foto de jogadores.";
