@@ -480,47 +480,51 @@
   <script src="tournament.js"></script>
   <script src="app.js"></script>
   <script>
-    // Registra service worker e detecta atualizações
+    // Versão atual embarcada no HTML
+    const APP_VERSION = "12";
+
+    function showUpdateBanner() {
+      const banner = document.getElementById("updateBanner");
+      if (banner) banner.classList.remove("hidden");
+    }
+
+    // Verificação de versão direta (ignora SW cache)
+    async function checkVersion() {
+      try {
+        const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.v && data.v !== APP_VERSION) {
+          // Limpa cache do SW e mostra banner
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+          showUpdateBanner();
+        }
+      } catch (e) { /* offline, ignora */ }
+    }
+
+    // Verifica ao abrir e a cada 20 segundos
+    checkVersion();
+    setInterval(checkVersion, 20 * 1000);
+
+    // Registra service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").then((reg) => {
-        // Força verificação de atualização ao abrir
         reg.update();
-
-        // Detecta quando o SW é atualizado e assume controle
-        reg.addEventListener("updatefound", () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener("statechange", () => {
-            // Com skipWaiting(), o novo SW ativa imediatamente
-            if (newWorker.state === "activated") {
-              showUpdateBanner();
-            }
-          });
-        });
-
-        // Verifica atualizações a cada 30 segundos (iOS não faz sozinho)
-        setInterval(() => reg.update(), 30 * 1000);
       }).catch(() => { });
 
-      // Quando o controllerchange dispara, mostra banner
-      let refreshing = false;
       navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (refreshing) return;
-        refreshing = true;
         showUpdateBanner();
       });
-
-      function showUpdateBanner() {
-        const banner = document.getElementById("updateBanner");
-        if (banner) banner.classList.remove("hidden");
-      }
-
-      // Botão atualizar — recarrega a página
-      document.getElementById("btnUpdate").addEventListener("click", () => {
-        document.getElementById("updateBanner").classList.add("hidden");
-        window.location.reload();
-      });
     }
+
+    // Botão atualizar — recarrega a página
+    document.getElementById("btnUpdate").addEventListener("click", () => {
+      document.getElementById("updateBanner").classList.add("hidden");
+      window.location.reload();
+    });
   </script>
 </body>
 

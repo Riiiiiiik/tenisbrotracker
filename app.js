@@ -478,42 +478,56 @@ function calculateCocaTracker(matchList) {
   const p1 = sorted[0].player1;
   const p2 = sorted[0].player2;
 
-  // Quem "deve" pagar na alternância normal (começa com quem perdeu o primeiro jogo)
-  let normalTurn = sorted[0].winner === p1 ? p2 : p1;
+  // Alternância começa com o VENCEDOR do primeiro jogo pagando
+  let normalTurn = sorted[0].winner;
   const history = [];
 
-  sorted.forEach((m, i) => {
-    const loser = m.winner === m.player1 ? m.player2 : m.player1;
-    const sweep = isSweep(m);
-    let payer;
+  // Contadores de vitórias acumuladas
+  const runningWins = {};
+  runningWins[p1] = 0;
+  runningWins[p2] = 0;
 
-    if (sweep) {
-      // Regra do 2-0: quem perde de varrida paga, sem alterar rotação
-      payer = loser;
-      // normalTurn NÃO muda
-    } else {
-      // Alternância normal
-      payer = normalTurn;
-      // Alterna para o próximo
-      normalTurn = normalTurn === p1 ? p2 : p1;
-    }
+  sorted.forEach((m, i) => {
+    runningWins[m.winner]++;
+    const loser = m.winner === p1 ? p2 : p1;
+
+    // Alternância normal: quem é a vez, paga
+    const payer = normalTurn;
+    // Avança a alternância
+    normalTurn = normalTurn === p1 ? p2 : p1;
 
     history.push({
       match: m,
       payer,
-      sweep,
       round: i + 1,
     });
   });
 
-  const lastEntry = history[history.length - 1];
+  // Verificar regra do 2-0 geral: se o H2H está X-0 (com X >= 2), o perdedor paga
+  const totalWins = {};
+  totalWins[p1] = sorted.filter(m => m.winner === p1).length;
+  totalWins[p2] = sorted.filter(m => m.winner === p2).length;
+
+  let nextPayer = normalTurn;
+  let overrideActive = false;
+
+  // Se um dos dois está zerado e o outro tem 2+, o que está zerado paga
+  if (totalWins[p1] >= 2 && totalWins[p2] === 0) {
+    nextPayer = p2;
+    overrideActive = true;
+  } else if (totalWins[p2] >= 2 && totalWins[p1] === 0) {
+    nextPayer = p1;
+    overrideActive = true;
+  }
+
   const cocaCount = {};
   cocaCount[p1] = history.filter(h => h.payer === p1).length;
   cocaCount[p2] = history.filter(h => h.payer === p2).length;
 
   return {
-    currentPayer: lastEntry.payer,
+    nextPayer,
     nextTurn: normalTurn,
+    overrideActive,
     history,
     cocaCount,
     players: [p1, p2],
@@ -529,7 +543,7 @@ function renderCocaTracker(matchList) {
 
   const [p1, p2] = coca.players;
   const lastH = coca.history[coca.history.length - 1];
-  const cocaIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2h8l-1 7H9L8 2z"/><path d="M9 9v10a3 3 0 0 0 6 0V9"/><path d="M7 9h10"/></svg>`;
+  const cocaIcon = `🥤`;
 
   el.innerHTML = `
     <div class="card coca-card">
@@ -537,13 +551,13 @@ function renderCocaTracker(matchList) {
         <span class="coca-title">${cocaIcon} Tracker da Coca</span>
       </div>
       <div class="coca-current">
-        <span class="coca-label">Ultimo pagou:</span>
-        <strong>${esc(lastH.payer)}</strong>
-        ${lastH.sweep ? `<span class="coca-sweep">2-0</span>` : ""}
+        <span class="coca-label">Proximo a pagar:</span>
+        <strong class="coca-payer">${esc(coca.nextPayer)}</strong>
+        ${coca.overrideActive ? `<span class="coca-sweep">regra 2-0</span>` : ""}
       </div>
       <div class="coca-current">
-        <span class="coca-label">Proxima vez (alternancia):</span>
-        <strong>${esc(coca.nextTurn)}</strong>
+        <span class="coca-label">Ultimo pagou:</span>
+        <strong>${esc(lastH.payer)}</strong>
       </div>
       <div class="coca-score">
         <span>${esc(p1)}: <strong>${coca.cocaCount[p1]}</strong> cocas</span>
