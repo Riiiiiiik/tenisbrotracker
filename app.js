@@ -437,9 +437,120 @@ function renderError(msg) {
 function renderApp() {
   const stats = calculateStats(matches);
   renderH2H(stats);
+  renderCocaTracker(matches);
   renderMatchesList();
   renderStats(stats);
   populateWinnerSelect();
+}
+
+// ── Coca Tracker ──────────────────────────────────────────────────────────
+// Regra: alternância normal de quem paga.
+// Override: quem perder de 2-0 (varrida) paga, sem alterar a rotação.
+
+function countSetsWon(m, player) {
+  let sets = 0;
+  const isP1 = player === m.player1;
+  const pairs = [
+    [m.set1_p1, m.set1_p2],
+    [m.set2_p1, m.set2_p2],
+    [m.set3_p1, m.set3_p2],
+    [m.set4_p1, m.set4_p2],
+    [m.set5_p1, m.set5_p2],
+  ];
+  for (const [s1, s2] of pairs) {
+    if (s1 === null || s2 === null) continue;
+    if (isP1 && s1 > s2) sets++;
+    if (!isP1 && s2 > s1) sets++;
+  }
+  return sets;
+}
+
+function isSweep(m) {
+  const loser = m.winner === m.player1 ? m.player2 : m.player1;
+  const loserSets = countSetsWon(m, loser);
+  return loserSets === 0;
+}
+
+function calculateCocaTracker(matchList) {
+  if (!matchList || matchList.length < 1) return null;
+
+  const sorted = [...matchList].sort((a, b) => a.match_date.localeCompare(b.match_date));
+  const p1 = sorted[0].player1;
+  const p2 = sorted[0].player2;
+
+  // Quem "deve" pagar na alternância normal (começa com quem perdeu o primeiro jogo)
+  let normalTurn = sorted[0].winner === p1 ? p2 : p1;
+  const history = [];
+
+  sorted.forEach((m, i) => {
+    const loser = m.winner === m.player1 ? m.player2 : m.player1;
+    const sweep = isSweep(m);
+    let payer;
+
+    if (sweep) {
+      // Regra do 2-0: quem perde de varrida paga, sem alterar rotação
+      payer = loser;
+      // normalTurn NÃO muda
+    } else {
+      // Alternância normal
+      payer = normalTurn;
+      // Alterna para o próximo
+      normalTurn = normalTurn === p1 ? p2 : p1;
+    }
+
+    history.push({
+      match: m,
+      payer,
+      sweep,
+      round: i + 1,
+    });
+  });
+
+  const lastEntry = history[history.length - 1];
+  const cocaCount = {};
+  cocaCount[p1] = history.filter(h => h.payer === p1).length;
+  cocaCount[p2] = history.filter(h => h.payer === p2).length;
+
+  return {
+    currentPayer: lastEntry.payer,
+    nextTurn: normalTurn,
+    history,
+    cocaCount,
+    players: [p1, p2],
+  };
+}
+
+function renderCocaTracker(matchList) {
+  const el = document.getElementById("cocaTracker");
+  if (!el) return;
+
+  const coca = calculateCocaTracker(matchList);
+  if (!coca) { el.innerHTML = ""; return; }
+
+  const [p1, p2] = coca.players;
+  const lastH = coca.history[coca.history.length - 1];
+  const cocaIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2h8l-1 7H9L8 2z"/><path d="M9 9v10a3 3 0 0 0 6 0V9"/><path d="M7 9h10"/></svg>`;
+
+  el.innerHTML = `
+    <div class="card coca-card">
+      <div class="coca-header">
+        <span class="coca-title">${cocaIcon} Tracker da Coca</span>
+      </div>
+      <div class="coca-current">
+        <span class="coca-label">Ultimo pagou:</span>
+        <strong>${esc(lastH.payer)}</strong>
+        ${lastH.sweep ? `<span class="coca-sweep">2-0</span>` : ""}
+      </div>
+      <div class="coca-current">
+        <span class="coca-label">Proxima vez (alternancia):</span>
+        <strong>${esc(coca.nextTurn)}</strong>
+      </div>
+      <div class="coca-score">
+        <span>${esc(p1)}: <strong>${coca.cocaCount[p1]}</strong> cocas</span>
+        <span>${esc(p2)}: <strong>${coca.cocaCount[p2]}</strong> cocas</span>
+      </div>
+    </div>
+  `;
 }
 
 function renderH2H(stats) {

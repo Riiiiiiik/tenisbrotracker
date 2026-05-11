@@ -137,7 +137,7 @@ async function createMatch(request, env) {
     icon: "./icon-192.png",
   };
   // Não bloqueia a resposta — envia push em background
-  const pushPromise = sendPushToAll(env, pushPayload).catch(() => {});
+  const pushPromise = sendPushToAll(env, pushPayload).catch(() => { });
   // Usa waitUntil se disponível (CF Workers)
   if (typeof ctx !== 'undefined' && ctx.waitUntil) ctx.waitUntil(pushPromise);
 
