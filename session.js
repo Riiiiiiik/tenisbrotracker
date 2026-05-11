@@ -143,9 +143,11 @@ function renderLiveSession(session) {
   const isActive = session.status === "active";
   const sessionPlayers = session.players || [];
   const maxWins = Math.max(...sessionPlayers.map(p => p.wins), 0);
+  const rounds = getSessionRounds(session.id);
 
   const userSvg = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 
+  // Header
   let html = `<div class="qs-header">
     <div class="qs-title">Sessao Rapida</div>
     <div class="qs-meta">Primeiro a ${session.games_to_win} games</div>
@@ -153,9 +155,9 @@ function renderLiveSession(session) {
     <div class="qs-status-badge ${session.status}">${isActive ? "Em andamento" : "Finalizada"}</div>
   </div>`;
 
-  // Cards dos jogadores
+  // Placar geral dos jogadores
   html += `<div class="qs-players-grid count-${sessionPlayers.length}">`;
-  sessionPlayers
+  [...sessionPlayers]
     .sort((a, b) => b.wins - a.wins)
     .forEach((p, i) => {
       const av = getPlayerAvatar(p.player_name);
@@ -167,13 +169,40 @@ function renderLiveSession(session) {
         <div class="qs-player-avatar">${av ? `<img src="${av}" alt="${esc(p.player_name)}">` : userSvg}</div>
         <div class="qs-player-name">${esc(p.player_name)}</div>
         <div class="qs-player-score">${p.wins}</div>
-        ${isActive ? `
-          <button class="qs-btn-plus-big" onclick="addScore(${session.id},'${esc(p.player_name)}',1)">+1</button>
-          ${p.wins > 0 ? `<button class="qs-btn-minus-sm" onclick="addScore(${session.id},'${esc(p.player_name)}',-1)">desfazer</button>` : ""}
-        ` : ""}
       </div>`;
     });
   html += `</div>`;
+
+  // Registrar rodada (só se ativo)
+  if (isActive) {
+    const playerNames = sessionPlayers.map(p => p.player_name);
+    html += `<div class="card qs-round-form">
+      <div class="qs-round-title">Registrar rodada</div>
+      <div class="qs-round-select">
+        <select id="qsRoundP1" class="qs-select">
+          ${playerNames.map((n, i) => `<option value="${esc(n)}" ${i === 0 ? "selected" : ""}>${esc(n)}</option>`).join("")}
+        </select>
+        <span class="qs-vs">vs</span>
+        <select id="qsRoundP2" class="qs-select">
+          ${playerNames.map((n, i) => `<option value="${esc(n)}" ${i === 1 ? "selected" : ""}>${esc(n)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="qs-round-scores" id="qsRoundScores">
+        <!-- Botões gerados dinamicamente -->
+      </div>
+    </div>`;
+  }
+
+  // Histórico de rodadas
+  if (rounds.length) {
+    html += `<div class="qs-rounds-history">
+      <div class="qs-round-title" style="margin-bottom:8px">Rodadas (${rounds.length})</div>
+      ${rounds.map((r, i) => `<div class="qs-round-entry">
+        <span class="qs-round-num">#${i + 1}</span>
+        <span class="qs-round-result"><strong>${esc(r.winner)}</strong> ${r.scoreW}-${r.scoreL} ${esc(r.loser)}</span>
+      </div>`).reverse().join("")}
+    </div>`;
+  }
 
   // Ações
   if (isActive) {
@@ -189,6 +218,77 @@ function renderLiveSession(session) {
   }
 
   area.innerHTML = html;
+
+  // Gerar botões de placar após renderizar
+  if (isActive) {
+    generateScoreButtons(session);
+    // Atualizar botões quando selects mudam
+    document.getElementById("qsRoundP1").addEventListener("change", () => generateScoreButtons(session));
+    document.getElementById("qsRoundP2").addEventListener("change", () => generateScoreButtons(session));
+  }
+}
+
+// Gera botões de placar rápido (3-0, 3-1, 3-2, etc.)
+function generateScoreButtons(session) {
+  const p1 = document.getElementById("qsRoundP1").value;
+  const p2 = document.getElementById("qsRoundP2").value;
+  const container = document.getElementById("qsRoundScores");
+  const g = session.games_to_win;
+
+  if (p1 === p2) {
+    container.innerHTML = `<span style="font-size:.78rem;color:var(--text-sec)">Selecione dois jogadores diferentes.</span>`;
+    return;
+  }
+
+  // Gerar placares possíveis (g-0, g-1, g-2, ...)
+  let buttons = "";
+  for (let lost = 0; lost < g; lost++) {
+    buttons += `<button class="qs-score-btn" onclick="registerRound(${session.id},'${esc(p1)}','${esc(p2)}',${g},${lost})">${esc(p1)} ${g}-${lost}</button>`;
+  }
+  for (let lost = 0; lost < g; lost++) {
+    buttons += `<button class="qs-score-btn" onclick="registerRound(${session.id},'${esc(p2)}','${esc(p1)}',${g},${lost})">${esc(p2)} ${g}-${lost}</button>`;
+  }
+
+  container.innerHTML = buttons;
+}
+
+// Registra uma rodada: vencedor, perdedor, placar
+async function registerRound(sessionId, winner, loser, scoreW, scoreL) {
+  // Salvar rodada no localStorage
+  saveSessionRound(sessionId, { winner, loser, scoreW, scoreL, time: new Date().toISOString() });
+
+  // Atualização otimista
+  if (currentSession) {
+    const p = currentSession.players.find(x => x.player_name === winner);
+    if (p) { p.wins += 1; renderLiveSession(currentSession); }
+  }
+
+  // Sincronizar com API
+  try {
+    const session = await apiRequest(`/sessions/${sessionId}/score`, "PUT", {
+      player_name: winner,
+      delta: 1,
+    });
+    currentSession = session;
+    renderLiveSession(session);
+  } catch (e) {
+    showToast(e.message, true);
+    const session = await apiRequest(`/sessions/${sessionId}`).catch(() => null);
+    if (session) { currentSession = session; renderLiveSession(session); }
+  }
+}
+
+// Persistência das rodadas em localStorage
+function getSessionRounds(sessionId) {
+  try {
+    return JSON.parse(localStorage.getItem(`qs_rounds_${sessionId}`)) || [];
+  } catch { return []; }
+}
+
+function saveSessionRound(sessionId, round) {
+  const rounds = getSessionRounds(sessionId);
+  rounds.push(round);
+  localStorage.setItem(`qs_rounds_${sessionId}`, JSON.stringify(rounds));
 }
 
 function backToSessionForm() {

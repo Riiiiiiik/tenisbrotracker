@@ -296,3 +296,20 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
 .qs-player-toggle.selected .qs-toggle-check{background:var(--green);border-color:var(--green);color:#fff}
 .qs-player-toggle span{font-weight:600;font-size:.85rem}
 
+/* Formulário de rodada */
+.qs-round-form{padding:20px;border:1px solid var(--border);margin-top:16px}
+.qs-round-title{font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--text)}
+.qs-round-select{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.qs-select{flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:inherit;font-size:.85rem;font-weight:600;-webkit-appearance:none;appearance:none}
+.qs-vs{font-size:.78rem;font-weight:700;color:var(--text-sec);flex-shrink:0}
+.qs-round-scores{display:flex;flex-wrap:wrap;gap:8px}
+.qs-score-btn{padding:10px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--card);color:var(--text);font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .15s;flex:1;min-width:calc(33% - 8px);text-align:center}
+.qs-score-btn:active{background:var(--green);color:#fff;border-color:var(--green);transform:scale(.95)}
+
+/* Histórico de rodadas */
+.qs-rounds-history{margin-top:16px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.qs-round-entry{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.qs-round-entry:last-child{border-bottom:none}
+.qs-round-num{font-size:.7rem;font-weight:700;color:var(--text-sec);min-width:24px}
+.qs-round-result{font-size:.82rem;font-weight:500}
+.qs-round-result strong{color:var(--green);font-weight:700}

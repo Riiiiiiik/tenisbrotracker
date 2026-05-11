@@ -40,8 +40,8 @@ async function createTournamentFromForm() {
   if (!startDate) { showToast("Selecione a data de início.", true); return; }
 
   // Coletar jogadores selecionados
-  const checkboxes = document.querySelectorAll("#tPlayersList input[type='checkbox']:checked");
-  const selectedPlayers = Array.from(checkboxes).map(cb => cb.value);
+  const toggles = document.querySelectorAll("#tPlayersList .qs-player-toggle.selected");
+  const selectedPlayers = Array.from(toggles).map(el => el.dataset.player);
 
   if (selectedPlayers.length < 2) {
     showToast("Selecione pelo menos 2 jogadores.", true);
@@ -170,9 +170,15 @@ function populateTournamentPlayersForm() {
     el.innerHTML = `<span style="font-size:.8rem;color:var(--text-sec)">Cadastre jogadores primeiro na aba Config.</span>`;
     return;
   }
-  el.innerHTML = players.map(p =>
-    `<label><input type="checkbox" value="${esc(p.name)}"> ${esc(p.name)}</label>`
-  ).join("");
+  const userIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  el.innerHTML = players.map(p => {
+    const av = p.avatar ? `<img src="${p.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : userIcon;
+    return `<div class="qs-player-toggle" data-player="${esc(p.name)}" onclick="this.classList.toggle('selected')">
+      <div class="qs-toggle-check"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      ${av}
+      <span>${esc(p.name)}</span>
+    </div>`;
+  }).join("");
 }
 
 function renderTournamentRanking(data) {
