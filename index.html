@@ -479,47 +479,42 @@
   <script>
     // Registra service worker e detecta atualizações
     if ("serviceWorker" in navigator) {
-      let waitingWorker = null;
-
-      function showUpdateBanner(worker) {
-        waitingWorker = worker;
-        document.getElementById("updateBanner").classList.remove("hidden");
-      }
-
       navigator.serviceWorker.register("sw.js").then((reg) => {
-        // Verifica se já tem um worker esperando
-        if (reg.waiting) {
-          showUpdateBanner(reg.waiting);
-        }
+        // Força verificação de atualização ao abrir
+        reg.update();
 
-        // Detecta quando um novo worker está pronto
+        // Detecta quando o SW é atualizado e assume controle
         reg.addEventListener("updatefound", () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
           newWorker.addEventListener("statechange", () => {
-            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-              showUpdateBanner(newWorker);
+            // Com skipWaiting(), o novo SW ativa imediatamente
+            if (newWorker.state === "activated") {
+              showUpdateBanner();
             }
           });
         });
 
-        // Força verificação de atualização ao abrir
-        reg.update();
-
-        // Verifica atualizações a cada 60 segundos (importante para iOS)
-        setInterval(() => reg.update(), 60 * 1000);
+        // Verifica atualizações a cada 30 segundos (iOS não faz sozinho)
+        setInterval(() => reg.update(), 30 * 1000);
       }).catch(() => { });
 
-      // Quando o botão "Atualizar" é clicado
-      document.getElementById("btnUpdate").addEventListener("click", () => {
-        if (waitingWorker) {
-          waitingWorker.postMessage("SKIP_WAITING");
-        }
-        document.getElementById("updateBanner").classList.add("hidden");
+      // Quando o controllerchange dispara, mostra banner
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        showUpdateBanner();
       });
 
-      // Recarrega a página quando o novo service worker assume o controle
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
+      function showUpdateBanner() {
+        const banner = document.getElementById("updateBanner");
+        if (banner) banner.classList.remove("hidden");
+      }
+
+      // Botão atualizar — recarrega a página
+      document.getElementById("btnUpdate").addEventListener("click", () => {
+        document.getElementById("updateBanner").classList.add("hidden");
         window.location.reload();
       });
     }
