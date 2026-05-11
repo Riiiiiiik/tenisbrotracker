@@ -9,8 +9,7 @@ let recentSessions = [];
 // ── CRUD de sessões ──────────────────────────────────────────────────────
 
 async function createQuickSession() {
-  const checkboxes = document.querySelectorAll("#qsPlayersList input[type='checkbox']:checked");
-  const selectedPlayers = Array.from(checkboxes).map(cb => cb.value);
+  const selectedPlayers = getSelectedQsPlayers();
 
   if (selectedPlayers.length < 2) {
     showToast("Selecione pelo menos 2 jogadores.", true);
@@ -103,11 +102,24 @@ function renderQuickSessionForm() {
     el.innerHTML = `<span style="font-size:.8rem;color:var(--text-sec)">Cadastre jogadores primeiro na aba Config.</span>`;
     return;
   }
-  const userIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const userIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
   el.innerHTML = players.map(p => {
-    const av = p.avatar ? `<img src="${p.avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">` : userIcon;
-    return `<label class="qs-player-check"><input type="checkbox" value="${esc(p.name)}"> ${av} <span>${esc(p.name)}</span></label>`;
+    const av = p.avatar ? `<img src="${p.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : userIcon;
+    return `<div class="qs-player-toggle" data-player="${esc(p.name)}" onclick="toggleQsPlayer(this)">
+      <div class="qs-toggle-check"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      ${av}
+      <span>${esc(p.name)}</span>
+    </div>`;
   }).join("");
+}
+
+function toggleQsPlayer(el) {
+  el.classList.toggle("selected");
+}
+
+function getSelectedQsPlayers() {
+  const els = document.querySelectorAll("#qsPlayersList .qs-player-toggle.selected");
+  return Array.from(els).map(el => el.dataset.player);
 }
 
 function renderLiveSession(session) {

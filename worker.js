@@ -249,17 +249,17 @@ async function createPlayer(request, env) {
  */
 async function updatePlayer(request, env, id) {
   let body;
-  try { body = await request.json(); } catch { return errorResponse("Body inválido."); }
+  try { body = await request.json(); } catch { return errorResponse("Body invalido."); }
 
-  const existing = await env.DB.prepare(`SELECT id FROM players WHERE id = ?`).bind(id).first();
-  if (!existing) return errorResponse("Jogador não encontrado.", 404);
+  const existing = await env.DB.prepare(`SELECT * FROM players WHERE id = ?`).bind(id).first();
+  if (!existing) return errorResponse("Jogador nao encontrado.", 404);
 
-  const { name, avatar } = body;
-  if (!name) return errorResponse("Nome do jogador é obrigatório.");
+  const name = body.name || existing.name;
+  const avatar = body.avatar !== undefined ? body.avatar : existing.avatar;
 
   await env.DB.prepare(
     `UPDATE players SET name = ?, avatar = ? WHERE id = ?`
-  ).bind(name, avatar ?? null, id).run();
+  ).bind(name, avatar, id).run();
 
   const updated = await env.DB.prepare(`SELECT * FROM players WHERE id = ?`).bind(id).first();
   return jsonResponse(updated);
