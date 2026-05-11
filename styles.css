@@ -270,11 +270,10 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
 .qs-player-name{font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:6px}
 .qs-player-score{font-size:2rem;font-weight:800;color:var(--green);line-height:1;margin-bottom:10px}
 
-.qs-player-actions{display:flex;gap:6px;justify-content:center}
-.qs-btn-score{border:none;border-radius:8px;padding:8px 16px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;transition:transform .12s}
-.qs-btn-score:active{transform:scale(.92)}
-.qs-btn-plus{background:var(--green);color:#fff}
-.qs-btn-minus{background:var(--border);color:var(--text-sec);font-size:.75rem;padding:6px 10px}
+.qs-btn-plus-big{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;font-family:inherit;font-size:1.1rem;font-weight:800;cursor:pointer;transition:transform .12s;margin-top:6px}
+.qs-btn-plus-big:active{transform:scale(.94)}
+.qs-btn-minus-sm{width:100%;padding:6px;border:none;border-radius:6px;background:transparent;color:var(--text-sec);font-family:inherit;font-size:.7rem;font-weight:600;cursor:pointer;margin-top:4px}
+.qs-btn-minus-sm:active{color:var(--danger)}
 
 .qs-actions{display:flex;gap:10px;margin-top:8px}
 .qs-actions .btn{flex:1}

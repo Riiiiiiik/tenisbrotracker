@@ -48,15 +48,28 @@ async function loadSession(id) {
 }
 
 async function addScore(sessionId, playerName, delta) {
+  // Atualização otimista — muda o placar instantaneamente
+  if (currentSession) {
+    const p = currentSession.players.find(x => x.player_name === playerName);
+    if (p) {
+      p.wins = Math.max(0, p.wins + delta);
+      renderLiveSession(currentSession);
+    }
+  }
+  // Sincroniza com API em background
   try {
     const session = await apiRequest(`/sessions/${sessionId}/score`, "PUT", {
       player_name: playerName,
       delta,
     });
     currentSession = session;
+    // Re-render com dados reais do servidor
     renderLiveSession(session);
   } catch (e) {
+    // Reverte se falhar — recarrega do servidor
     showToast(e.message, true);
+    const session = await apiRequest(`/sessions/${sessionId}`).catch(() => null);
+    if (session) { currentSession = session; renderLiveSession(session); }
   }
 }
 
@@ -155,10 +168,8 @@ function renderLiveSession(session) {
         <div class="qs-player-name">${esc(p.player_name)}</div>
         <div class="qs-player-score">${p.wins}</div>
         ${isActive ? `
-          <div class="qs-player-actions">
-            <button class="qs-btn-score qs-btn-plus" onclick="addScore(${session.id},'${esc(p.player_name)}',1)">+1</button>
-            ${p.wins > 0 ? `<button class="qs-btn-score qs-btn-minus" onclick="addScore(${session.id},'${esc(p.player_name)}',-1)">-1</button>` : ""}
-          </div>
+          <button class="qs-btn-plus-big" onclick="addScore(${session.id},'${esc(p.player_name)}',1)">+1</button>
+          ${p.wins > 0 ? `<button class="qs-btn-minus-sm" onclick="addScore(${session.id},'${esc(p.player_name)}',-1)">desfazer</button>` : ""}
         ` : ""}
       </div>`;
     });
