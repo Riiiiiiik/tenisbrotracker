@@ -214,17 +214,36 @@ function renderPlayersList() {
     return;
   }
   const userIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const editIcon = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
   el.innerHTML = players.map(p => `
     <div class="card player-card">
-      <div class="player-avatar">
+      <div class="player-avatar editable" onclick="triggerAvatarEdit(${p.id})">
         ${p.avatar ? `<img src="${p.avatar}" alt="${esc(p.name)}">` : userIcon}
+        <div class="avatar-edit-badge">${editIcon}</div>
       </div>
+      <input type="file" id="avatarInput_${p.id}" accept="image/*" class="hidden" onchange="handleAvatarEdit(${p.id}, this)">
       <div class="player-info">
         <div class="name">${esc(p.name)}</div>
       </div>
       <button class="btn btn-danger btn-sm" onclick="removePlayer(${p.id})">Remover</button>
     </div>
   `).join("");
+}
+
+function triggerAvatarEdit(playerId) {
+  document.getElementById("avatarInput_" + playerId).click();
+}
+
+async function handleAvatarEdit(playerId, input) {
+  if (!input.files || !input.files[0]) return;
+  const avatar = await resizeImage(input.files[0]);
+  try {
+    await apiRequest("/players/" + playerId, "PUT", { avatar });
+    showToast("Foto atualizada!");
+    await loadPlayers();
+  } catch (e) {
+    showToast(e.message, true);
+  }
 }
 
 // ── Navegação ─────────────────────────────────────────────────────────────

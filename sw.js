@@ -1,7 +1,7 @@
 // Service Worker — Court Clash PWA
 // Cache estático + Push Notifications + Atualização
 
-const CACHE_NAME = "court-clash-v9";
+const CACHE_NAME = "court-clash-v10";
 
 // Altere este texto a cada deploy para descrever o que mudou
 const UPDATE_NOTES = "Sessao Rapida com placar ao vivo, nova paleta de cores e melhorias visuais.";
@@ -18,7 +18,7 @@ const ASSETS = [
   "./icon-512.png",
 ];
 
-// Instala e faz cache dos assets estáticos
+// Instala, faz cache dos assets e força ativação imediata
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
@@ -34,9 +34,11 @@ self.addEventListener("install", (e) => {
       }
     })
   );
+  // Não espera banner — ativa imediatamente (importante para iOS)
+  self.skipWaiting();
 });
 
-// Limpa caches antigos
+// Limpa caches antigos e assume controle de todas as abas
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
@@ -46,7 +48,7 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Quando o app manda mensagem para pular a espera
+// Fallback para mensagem manual (caso futuro)
 self.addEventListener("message", (e) => {
   if (e.data === "SKIP_WAITING") {
     self.skipWaiting();
