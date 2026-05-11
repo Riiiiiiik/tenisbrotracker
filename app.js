@@ -474,46 +474,28 @@ function isSweep(m) {
 function calculateCocaTracker(matchList) {
   if (!matchList || matchList.length < 1) return null;
 
-  const sorted = [...matchList].sort((a, b) => a.match_date.localeCompare(b.match_date));
-  const p1 = sorted[0].player1;
-  const p2 = sorted[0].player2;
+  // Filtrar apenas partidas com coca_payer definido
+  const withCoca = matchList.filter(m => m.coca_payer);
+  if (!withCoca.length) return null;
 
-  // Alternância começa com o VENCEDOR do primeiro jogo
-  let normalTurn = sorted[0].winner;
-  const history = [];
-
-  sorted.forEach((m, i) => {
-    const loser = m.winner === p1 ? p2 : p1;
-    const sweep = isSweep(m);
-    let payer;
-
-    if (sweep && normalTurn === m.winner) {
-      // Regra do 2-0: era a vez do vencedor pagar, mas ele ganhou de 2-0
-      // Então o perdedor paga e a alternância NÃO avança
-      payer = loser;
-    } else {
-      // Alternância normal
-      payer = normalTurn;
-      normalTurn = normalTurn === p1 ? p2 : p1;
-    }
-
-    history.push({
-      match: m,
-      payer,
-      sweep,
-      round: i + 1,
-    });
-  });
+  const sorted = [...withCoca].sort((a, b) => a.match_date.localeCompare(b.match_date));
+  const allPlayers = new Set();
+  sorted.forEach(m => { allPlayers.add(m.player1); allPlayers.add(m.player2); });
+  const playerArr = Array.from(allPlayers);
 
   const cocaCount = {};
-  cocaCount[p1] = history.filter(h => h.payer === p1).length;
-  cocaCount[p2] = history.filter(h => h.payer === p2).length;
+  playerArr.forEach(p => { cocaCount[p] = 0; });
+  sorted.forEach(m => {
+    if (cocaCount[m.coca_payer] !== undefined) cocaCount[m.coca_payer]++;
+  });
+
+  const lastPayer = sorted[sorted.length - 1].coca_payer;
 
   return {
-    nextPayer: normalTurn,
-    history,
+    lastPayer,
+    history: sorted,
     cocaCount,
-    players: [p1, p2],
+    players: playerArr,
   };
 }
 
@@ -524,8 +506,6 @@ function renderCocaTracker(matchList) {
   const coca = calculateCocaTracker(matchList);
   if (!coca) { el.innerHTML = ""; return; }
 
-  const [p1, p2] = coca.players;
-  const lastH = coca.history[coca.history.length - 1];
   const cocaIcon = `🥤`;
 
   el.innerHTML = `
@@ -534,17 +514,11 @@ function renderCocaTracker(matchList) {
         <span class="coca-title">${cocaIcon} Tracker da Coca</span>
       </div>
       <div class="coca-current">
-        <span class="coca-label">Proximo a pagar:</span>
-        <strong class="coca-payer">${esc(coca.nextPayer)}</strong>
-      </div>
-      <div class="coca-current">
         <span class="coca-label">Ultimo pagou:</span>
-        <strong>${esc(lastH.payer)}</strong>
-        ${lastH.sweep ? `<span class="coca-sweep">2-0</span>` : ""}
+        <strong>${esc(coca.lastPayer)}</strong>
       </div>
       <div class="coca-score">
-        <span>${esc(p1)}: <strong>${coca.cocaCount[p1]}</strong> cocas</span>
-        <span>${esc(p2)}: <strong>${coca.cocaCount[p2]}</strong> cocas</span>
+        ${coca.players.map(p => `<span>${esc(p)}: <strong>${coca.cocaCount[p]}</strong> cocas</span>`).join("")}
       </div>
     </div>
   `;
@@ -736,7 +710,7 @@ function resetForm() {
     document.getElementById("fPlayer2").value = players[1].name;
   }
 
-
+  populateCocaSelect();
 }
 
 function fillFormForEdit(id) {
@@ -762,6 +736,18 @@ function fillFormForEdit(id) {
   document.getElementById("fS5P1").value = m.set5_p1 ?? "";
   document.getElementById("fS5P2").value = m.set5_p2 ?? "";
   document.getElementById("fNotes").value = m.notes || "";
+  populateCocaSelect(m.player1, m.player2, m.coca_payer || "");
+}
+
+// Popula o select de coca com os jogadores atuais do formulário
+function populateCocaSelect(p1, p2, selected) {
+  p1 = p1 || document.getElementById("fPlayer1").value.trim();
+  p2 = p2 || document.getElementById("fPlayer2").value.trim();
+  selected = selected || "";
+  const sel = document.getElementById("fCocaPayer");
+  sel.innerHTML = `<option value="">Ninguem</option>`
+    + (p1 ? `<option value="${esc(p1)}" ${selected === p1 ? "selected" : ""}>${esc(p1)}</option>` : "")
+    + (p2 ? `<option value="${esc(p2)}" ${selected === p2 ? "selected" : ""}>${esc(p2)}</option>` : "");
 }
 
 function getFormData() {
@@ -824,6 +810,7 @@ function getFormData() {
     set5_p2: s5p2 !== "" ? parseInt(s5p2) : null,
     winner,
     notes: document.getElementById("fNotes").value.trim() || null,
+    coca_payer: document.getElementById("fCocaPayer").value || null,
   };
 }
 
@@ -1051,6 +1038,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Atualizar select de vencedor quando os jogadores mudam
   document.getElementById("fPlayer1").addEventListener("change", populateWinnerSelect);
   document.getElementById("fPlayer2").addEventListener("change", populateWinnerSelect);
+
+  // Atualizar select da coca quando jogadores mudam
+  document.getElementById("fPlayer1").addEventListener("change", () => populateCocaSelect());
+  document.getElementById("fPlayer2").addEventListener("change", () => populateCocaSelect());
 
   document.getElementById("btnSaveMatch").addEventListener("click", async () => {
     const data = getFormData();

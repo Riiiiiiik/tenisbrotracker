@@ -100,7 +100,7 @@ async function createMatch(request, env) {
     player1, player2,
     set1_p1, set1_p2, set2_p1, set2_p2,
     set3_p1, set3_p2, set4_p1, set4_p2, set5_p1, set5_p2,
-    winner, match_date, notes
+    winner, match_date, notes, coca_payer
   } = body;
 
   // Validações básicas
@@ -112,8 +112,8 @@ async function createMatch(request, env) {
   }
 
   const result = await env.DB.prepare(
-    `INSERT INTO matches (player1, player2, set1_p1, set1_p2, set2_p1, set2_p2, set3_p1, set3_p2, set4_p1, set4_p2, set5_p1, set5_p2, winner, match_date, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO matches (player1, player2, set1_p1, set1_p2, set2_p1, set2_p2, set3_p1, set3_p2, set4_p1, set4_p2, set5_p1, set5_p2, winner, match_date, notes, coca_payer)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       player1, player2,
@@ -121,7 +121,7 @@ async function createMatch(request, env) {
       set3_p1 ?? null, set3_p2 ?? null,
       set4_p1 ?? null, set4_p2 ?? null,
       set5_p1 ?? null, set5_p2 ?? null,
-      winner, match_date, notes ?? null
+      winner, match_date, notes ?? null, coca_payer ?? null
     )
     .run();
 
@@ -165,7 +165,7 @@ async function updateMatch(request, env, id) {
     player1, player2,
     set1_p1, set1_p2, set2_p1, set2_p2,
     set3_p1, set3_p2, set4_p1, set4_p2, set5_p1, set5_p2,
-    winner, match_date, notes
+    winner, match_date, notes, coca_payer
   } = body;
 
   if (!player1 || !player2 || !winner || !match_date) {
@@ -178,7 +178,7 @@ async function updateMatch(request, env, id) {
          set1_p1 = ?, set1_p2 = ?, set2_p1 = ?, set2_p2 = ?,
          set3_p1 = ?, set3_p2 = ?, set4_p1 = ?, set4_p2 = ?,
          set5_p1 = ?, set5_p2 = ?,
-         winner = ?, match_date = ?, notes = ?,
+         winner = ?, match_date = ?, notes = ?, coca_payer = ?,
          updated_at = datetime('now')
      WHERE id = ?`
   )
@@ -188,7 +188,7 @@ async function updateMatch(request, env, id) {
       set3_p1 ?? null, set3_p2 ?? null,
       set4_p1 ?? null, set4_p2 ?? null,
       set5_p1 ?? null, set5_p2 ?? null,
-      winner, match_date, notes ?? null, id
+      winner, match_date, notes ?? null, coca_payer ?? null, id
     )
     .run();
 
