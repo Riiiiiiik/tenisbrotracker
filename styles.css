@@ -289,6 +289,7 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
 .qs-recent-prize{font-size:.72rem;color:var(--text-sec);margin-top:6px;font-style:italic}
 
 /* Toggle de seleção de jogadores na sessão rápida */
+.qs-players-list{display:flex;flex-direction:column;gap:8px}
 .qs-player-toggle{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none}
 .qs-player-toggle:active{transform:scale(.97)}
 .qs-player-toggle.selected{border-color:var(--green);background:rgba(16,185,129,.1)}
